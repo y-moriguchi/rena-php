@@ -1,10 +1,29 @@
 <?php
 class Rena {
     private $_ignore;
+    private $_trie;
 
-    function __construct($ignore = null) {
+    function __construct($ignore = null, $keys = null) {
         if($ignore != null) {
             $this->_ignore = $this->wrap($ignore);
+        } else {
+            $this->_ignore = null;
+        }
+        if($keys != null) {
+            $this->_trie = array('trie' => array(), 'terminate' => false);
+            foreach($keys as $key) {
+                $trie = &$this->_trie;
+                for($i = 0; $i < mb_strlen($key); $i++) {
+                    $ch = mb_substr($key, $i, 1);
+                    if(!$trie['trie'][$ch]) {
+                        $trie['trie'][$ch] = array('trie' => array(), 'terminate' => false);
+                    }
+                    $trie = &$trie['trie'][$ch];
+                }
+                $trie['terminate'] = true;
+            }
+        } else {
+            $this->_trie = null;
         }
     }
 
@@ -15,6 +34,30 @@ class Rena {
         $ignoreCall = $this->_ignore;
         $result = $ignoreCall($match, $lastIndex, false);
         return $result ? $result['lastIndex'] : $lastIndex;
+    }
+
+    private function matchKey($match, $index) {
+        if(!$this->_trie) {
+            return "";
+        }
+        $trie = &$this->_trie;
+        $now = "";
+        $result = "";
+        for($i = $index; true; $i++) {
+            if($i >= mb_strlen($match)) {
+                return $result;
+            }
+            $ch = mb_substr($match, $i, 1);
+            $now = $now . $ch;
+            if($trie['trie'][$ch]) {
+                $trie = &$trie['trie'][$ch];
+                if($trie['terminate']) {
+                    $result = $now;
+                }
+            } else {
+                return $result;
+            }
+        }
     }
 
     function wrap($object) {
@@ -149,6 +192,49 @@ class Rena {
             if($result) {
                 $attrNew = $action($result['match'], $result['attr'], $attr);
                 return array('match' => $result['match'], 'lastIndex' => $result['lastIndex'], 'attr' => $attrNew);
+            } else {
+                return false;
+            }
+        };
+    }
+
+    function key($key) {
+        return function($match, $lastIndex, $attr) use (&$key) {
+            $result = $this->matchKey($match, $lastIndex);
+            if($result == $key) {
+                return array('match' => $result, 'lastIndex' => $lastIndex + mb_strlen($result), 'attr' => $attr);
+            } else {
+                return false;
+            }
+        };
+    }
+
+    function notKey() {
+        return function($match, $lastIndex, $attr) use (&$key) {
+            $result = $this->matchKey($match, $lastIndex);
+            if($result == "") {
+                return array('match' => "", 'lastIndex' => $lastIndex, 'attr' => $attr);
+            } else {
+                return false;
+            }
+        };
+    }
+
+    function equalsId($key) {
+        $wrapped = $this->wrap($key);
+        return function($match, $lastIndex, $attr) use (&$wrapped) {
+            $result = $wrapped($match, $lastIndex, $attr);
+            if(!$result) {
+                return false;
+            } else if($result['lastIndex'] >= mb_strlen($match)) {
+                return $result;
+            } else if($this->_ignore == null && $this->_trie == null) {
+                return $result;
+            } else if($this->_ignore && $this->ignore($match, $result['lastIndex']) > $result['lastIndex']) {
+                $result['lastIndex'] = $this->ignore($match, $result['lastIndex']);
+                return $result;
+            } else if($this->_trie && $this->matchKey($match, $result['lastIndex']) != "") {
+                return $result;
             } else {
                 return false;
             }
