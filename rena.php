@@ -1,4 +1,12 @@
 <?php
+/*
+ * Rena PHP
+ *
+ * Copyright (c) 2019 Yuichiro MORIGUCHI
+ *
+ * This software is released under the MIT License.
+ * http://opensource.org/licenses/mit-license.php
+ */
 class Rena {
     private $_ignore;
     private $_trie;
@@ -288,6 +296,26 @@ class Rena {
                 return $result;
             } else if($this->_trie && $this->matchKey($match, $result['lastIndex']) != "") {
                 return $result;
+            } else {
+                return false;
+            }
+        };
+    }
+
+    function matchReal() {
+        return $this->action($this->re('/[\\+\\-]?(?:[0-9]+(?:\\.[0-9]+)?|\\.[0-9]+)(?:[eE][\\+\\-]?[0-9]+)?/'), function($match, $syn, $inh) {
+            return (double)$match;
+        });
+    }
+
+    function br() {
+        return $this->re('/\r\n|\r|\n/');
+    }
+
+    function end() {
+        return function($match, $lastIndex, $attr) {
+            if($lastIndex >= mb_strlen($match)) {
+                return array('match' => '', 'lastIndex' => $lastIndex, 'attr' => $attr);
             } else {
                 return false;
             }
