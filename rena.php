@@ -92,7 +92,7 @@ class Rena {
                     $attrNew = $result['attrNew'];
                 }
             }
-            return array('match' => mb_substr($match, $lastIndex, $indexNew), 'lastIndex' => $indexNew, 'attr' => $attrNew);
+            return array('match' => mb_substr($match, $lastIndex, $indexNew - $lastIndex), 'lastIndex' => $indexNew, 'attr' => $attrNew);
         };
     }
 
@@ -124,11 +124,11 @@ class Rena {
                 } else if($count < $minCount) {
                     return false;
                 } else {
-                    $matched = mb_substr($match, $lastIndex, $indexNew);
+                    $matched = mb_substr($match, $lastIndex, $indexNew - $lastIndex);
                     return array('match' => $matched, 'lastIndex' => $indexNew, 'attr' => $attrNew);
                 }
             }
-            $matched = mb_substr($match, $lastIndex, $indexNew);
+            $matched = mb_substr($match, $lastIndex, $indexNew - $lastIndex);
             return array('match' => $matched, 'lastIndex' => $indexNew, 'attr' => $attrNew);
         };
     }
@@ -151,6 +151,36 @@ class Rena {
 
     function maybe($exp) {
         return $this->times(0, 1, $exp);
+    }
+
+    function delimit($exp, $delimiter, $action = null) {
+        $wrapped = $this->wrap($exp);
+        $wrappedDelimiter = $this->wrap($delimiter);
+        $wrappedAction = $action ? $action : function($match, $syn, $inh) { return $inh; };
+        return function($match, $lastIndex, $attr) use (&$wrapped, &$wrappedDelimiter, &$wrappedAction) {
+            $indexNew = $lastIndex;
+            $attrNew = $attr;
+            $indexLoop = $lastIndex;
+            while(true) {
+                $result = $wrapped($match, $indexLoop, $attrNew);
+                if($result) {
+                    $indexNew = $this->ignore($match, $result['lastIndex']);
+                    $attrNew = $wrappedAction($result['match'], $result['attr'], $attrNew);
+                    $resultDelimiter = $wrappedDelimiter($match, $indexNew, $attrNew);
+                    if($resultDelimiter) {
+                        $indexLoop = $this->ignore($match, $resultDelimiter['lastIndex']);
+                    } else {
+                        $matched = mb_substr($match, $lastIndex, $indexNew - $lastIndex);
+                        return array('match' => $matched, 'lastIndex' => $indexNew, 'attr' => $attrNew);
+                    }
+                } else if($indexNew > $lastIndex) {
+                    $matched = mb_substr($match, $lastIndex, $indexNew - $lastIndex);
+                    return array('match' => $matched, 'lastIndex' => $indexNew, 'attr' => $attrNew);
+                } else {
+                    return false;
+                }
+            }
+        };
     }
 
     function lookahead($exp, $singum = true) {
