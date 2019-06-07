@@ -60,6 +60,11 @@ class Rena {
         }
     }
 
+    private function convertToByte($match, $lastIndex) {
+        $cut = mb_substr($match, 0, $lastIndex);
+        return strlen($cut);
+    }
+
     function wrap($object) {
         if(is_string($object)) {
             return function($match, $lastIndex, $attr) use ($object) {
@@ -76,6 +81,24 @@ class Rena {
         } else {
             return $object;
         }
+    }
+
+    function re($regex) {
+        $firstCh = mb_substr($regex, 0, 1);
+        $lastPos = mb_strlen($regex) - mb_strrpos($regex, $firstCh);
+        $lastCh = mb_substr($regex, -$lastPos, $lastPos);
+        $middle = mb_substr($regex, 1, mb_strlen($regex) - $lastPos - 1);
+        $modifiedRe = $firstCh . '\\G(?:' . $middle . ')' . $lastCh;
+        return function($match, $lastIndex, $attr) use ($modifiedRe) {
+            $lastByte = $this->convertToByte($match, $lastIndex);
+            $matches = array();
+            $ret = preg_match($modifiedRe, $match, $matches, 0, $lastByte);
+            if($ret === 1) {
+                return array('match' => $matches[0], 'lastIndex' => $lastIndex + mb_strlen($matches[0]), 'attr' => $attr);
+            } else {
+                return false;
+            }
+        };
     }
 
     function then(...$funcs) {
