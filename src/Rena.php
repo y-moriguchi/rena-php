@@ -133,7 +133,7 @@ class Rena {
         return function($match, $lastIndex, $attr) use (&$funcs) {
             foreach($funcs as $func) {
                 $wrapped = $this->wrap($func);
-                $result = $wrapped($match, $indexNew, $attrNew);
+                $result = $wrapped($match, $lastIndex, $attr);
                 if($result) {
                     return $result;
                 }
@@ -216,9 +216,9 @@ class Rena {
         };
     }
 
-    function lookahead($exp, $singum = true) {
+    function lookahead($exp, $signum = true) {
         $wrapped = $this->wrap($exp);
-        return function($match, $lastIndex, $attr) use (&$wrapped) {
+        return function($match, $lastIndex, $attr) use (&$wrapped, $signum) {
             $result = $wrapped($match, $lastIndex, $attr);
             if(($result && $signum) || (!$result && !$signum)) {
                 return array('match' => '', 'lastIndex' => $lastIndex, 'attr' => $attr);
