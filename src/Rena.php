@@ -1,11 +1,6 @@
 <?php
 /*
- * Rena PHP
- *
- * Copyright (c) 2019 Yuichiro MORIGUCHI
- *
- * This software is released under the MIT License.
- * http://opensource.org/licenses/mit-license.php
+ * This source code is under the Unlicense
  */
 namespace Morilib;
 
@@ -111,7 +106,7 @@ class Rena {
         };
     }
 
-    function then(...$funcs) {
+    function concat(...$funcs) {
         return function($match, $lastIndex, $attr) use (&$funcs) {
             $indexNew = $lastIndex;
             $attrNew = $attr;
@@ -142,7 +137,7 @@ class Rena {
         };
     }
 
-    function times($minCount, $maxCount, $exp, $action = null) {
+    private function times($minCount, $maxCount, $exp, $action = null) {
         $wrapped = $this->wrap($exp);
         $wrappedAction = $action ? $action : function($match, $syn, $inh) { return $inh; };
         return function($match, $lastIndex, $attr) use ($minCount, $maxCount, &$wrapped, &$wrappedAction) {
@@ -166,54 +161,16 @@ class Rena {
         };
     }
 
-    function atLeast($minCount, $exp, $action = null) {
-        return $this->times($minCount, false, $exp, $action);
+    function oneOrMore($exp) {
+        return $this->times(1, false, $exp);
     }
 
-    function atMost($maxCount, $exp, $action = null) {
-        return $this->times(0, $maxCount, $exp, $action);
+    function zeroOrMore($exp) {
+        return $this->times(0, false, $exp);
     }
 
-    function oneOrMore($exp, $action = null) {
-        return $this->times(1, false, $exp, $action);
-    }
-
-    function zeroOrMore($exp, $action = null) {
-        return $this->times(0, false, $exp, $action);
-    }
-
-    function maybe($exp) {
+    function opt($exp) {
         return $this->times(0, 1, $exp);
-    }
-
-    function delimit($exp, $delimiter, $action = null) {
-        $wrapped = $this->wrap($exp);
-        $wrappedDelimiter = $this->wrap($delimiter);
-        $wrappedAction = $action ? $action : function($match, $syn, $inh) { return $inh; };
-        return function($match, $lastIndex, $attr) use (&$wrapped, &$wrappedDelimiter, &$wrappedAction) {
-            $indexNew = $lastIndex;
-            $attrNew = $attr;
-            $indexLoop = $lastIndex;
-            while(true) {
-                $result = $wrapped($match, $indexLoop, $attrNew);
-                if($result) {
-                    $indexNew = $this->ignore($match, $result['lastIndex']);
-                    $attrNew = $wrappedAction($result['match'], $result['attr'], $attrNew);
-                    $resultDelimiter = $wrappedDelimiter($match, $indexNew, $attrNew);
-                    if($resultDelimiter) {
-                        $indexLoop = $this->ignore($match, $resultDelimiter['lastIndex']);
-                    } else {
-                        $matched = mb_substr($match, $lastIndex, $indexNew - $lastIndex);
-                        return array('match' => $matched, 'lastIndex' => $indexNew, 'attr' => $attrNew);
-                    }
-                } else if($indexNew > $lastIndex) {
-                    $matched = mb_substr($match, $lastIndex, $indexNew - $lastIndex);
-                    return array('match' => $matched, 'lastIndex' => $indexNew, 'attr' => $attrNew);
-                } else {
-                    return false;
-                }
-            }
-        };
     }
 
     function lookahead($exp, $signum = true) {
@@ -235,16 +192,6 @@ class Rena {
     function attr($attr) {
         return function($match, $lastIndex, $attrOld) use (&$attr) {
             return array('match' => '', 'lastIndex' => $lastIndex, 'attr' => $attr);
-        };
-    }
-
-    function cond($pred) {
-        return function($match, $lastIndex, $attr) use (&$pred) {
-            if($pred($attr)) {
-                return array('match' => '', 'lastIndex' => $lastIndex, 'attr' => $attr);
-            } else {
-                return false;
-            }
         };
     }
 
@@ -314,7 +261,7 @@ class Rena {
         return $this->re('/\r\n|\r|\n/');
     }
 
-    function end() {
+    function isEnd() {
         return function($match, $lastIndex, $attr) {
             if($lastIndex >= mb_strlen($match)) {
                 return array('match' => '', 'lastIndex' => $lastIndex, 'attr' => $attr);

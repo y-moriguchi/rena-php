@@ -1,11 +1,6 @@
 <?php
 /*
- * Rena PHP
- *
- * Copyright (c) 2019 Yuichiro MORIGUCHI
- *
- * This software is released under the MIT License.
- * http://opensource.org/licenses/mit-license.php
+ * This source code is under the Unlicense
  */
 require_once('vendor/autoload.php');
 
@@ -59,19 +54,19 @@ class RenaTest extends PHPUnit\Framework\TestCase {
         $this->nomatch($r->re('/[a-z]/'), '');
     }
 
-    public function test_then() {
+    public function test_concat() {
         $r = new Morilib\Rena();
-        $this->match($r->then('765', 'pro'), '765pro', '765pro', 6, 0);
-        $this->nomatch($r->then('765', 'pro'), '961pro');
-        $this->nomatch($r->then('765', 'pro'), '765aaa');
-        $this->nomatch($r->then('765', 'pro'), '765');
-        $this->nomatch($r->then('765', 'pro'), '');
+        $this->match($r->concat('765', 'pro'), '765pro', '765pro', 6, 0);
+        $this->nomatch($r->concat('765', 'pro'), '961pro');
+        $this->nomatch($r->concat('765', 'pro'), '765aaa');
+        $this->nomatch($r->concat('765', 'pro'), '765');
+        $this->nomatch($r->concat('765', 'pro'), '');
     }
 
-    public function test_then_ignore() {
+    public function test_concat_ignore() {
         $r = new Morilib\Rena(' ');
-        $this->match($r->then('765', 'pro'), '765 pro', '765 pro', 7, 0);
-        $this->match($r->then('765', 'pro'), '765 pro ', '765 pro ', 8, 0);
+        $this->match($r->concat('765', 'pro'), '765 pro', '765 pro', 7, 0);
+        $this->match($r->concat('765', 'pro'), '765 pro ', '765 pro ', 8, 0);
     }
 
     public function test_choice() {
@@ -80,51 +75,6 @@ class RenaTest extends PHPUnit\Framework\TestCase {
         $this->match($r->choice('765', '346'), '346', '346', 3, 0);
         $this->nomatch($r->choice('765', '346'), '961');
         $this->nomatch($r->choice('765', '346'), '');
-    }
-
-    public function test_times() {
-        $r = new Morilib\Rena();
-        $this->match($r->times(2, 4, 'a'), 'aa', 'aa', 2, 0);
-        $this->match($r->times(2, 4, 'a'), 'aaa', 'aaa', 3, 0);
-        $this->match($r->times(2, 4, 'a'), 'aaaa', 'aaaa', 4, 0);
-        $this->match($r->times(2, 4, 'a'), 'aaaaa', 'aaaa', 4, 0);
-        $this->match($r->times(2, false, 'a'), 'aaaaa', 'aaaaa', 5, 0);
-        $this->nomatch($r->times(2, 4, 'a'), 'a');
-        $this->nomatch($r->times(2, 4, 'a'), '');
-    }
-
-    public function test_times_ignore() {
-        $r = new Morilib\Rena(' ');
-        $this->match($r->times(2, 4, 'a'), 'a aa', 'a aa', 4, 0);
-        $this->match($r->times(2, 4, 'a'), 'a a ', 'a a ', 4, 0);
-    }
-
-    public function test_times_action() {
-        $r = new Morilib\Rena();
-        $e0 = $r->action($r->re('/[1-9]/'), function($match, $syn, $inh) {
-            return (int)$match;
-        });
-        $e = $r->times(2, 4, $e0, function($match, $syn, $inh) {
-            return $syn + $inh;
-        });
-        $this->match($e, '765', '765', 3, 18);
-        $this->match($e, '27', '27', 2, 9);
-    }
-
-    public function test_atLeast() {
-        $r = new Morilib\Rena();
-        $this->match($r->atLeast(2, 'a'), 'aa', 'aa', 2, 0);
-        $this->match($r->atLeast(2, 'a'), 'aaaaa', 'aaaaa', 5, 0);
-        $this->nomatch($r->atLeast(2, 'a'), 'a');
-        $this->nomatch($r->atLeast(2, 'a'), '');
-    }
-
-    public function test_atMost() {
-        $r = new Morilib\Rena();
-        $this->match($r->atMost(4, 'a'), 'aa', 'aa', 2, 0);
-        $this->match($r->atMost(4, 'a'), 'aaaa', 'aaaa', 4, 0);
-        $this->match($r->atMost(4, 'a'), 'aaaaa', 'aaaa', 4, 0);
-        $this->match($r->atMost(4, 'a'), '', '', 0, 0);
     }
 
     public function test_oneOrMore() {
@@ -143,39 +93,17 @@ class RenaTest extends PHPUnit\Framework\TestCase {
         $this->match($r->zeroOrMore('a'), '', '', 0, 0);
     }
 
-    public function test_maybe() {
-        $r = new Morilib\Rena();
-        $this->match($r->maybe('a'), 'a', 'a', 1, 0);
-        $this->match($r->maybe('a'), 'aa', 'a', 1, 0);
-        $this->match($r->maybe('a'), '', '', 0, 0);
-    }
-
-    public function test_delimit() {
-        $r = new Morilib\Rena();
-        $this->match($r->delimit('a', ','), 'a,a', 'a,a', 3, 0);
-        $this->match($r->delimit('a', ','), 'a', 'a', 1, 0);
-        $this->match($r->delimit('a', ','), 'a,', 'a', 1, 0);
-        $this->match($r->delimit('a', ','), 'a,b', 'a', 1, 0);
-        $this->nomatch($r->delimit('a', ','), '');
-    }
-
-    public function test_delimit_ignore() {
+    public function test_zeroOrMoreIgnore() {
         $r = new Morilib\Rena(' ');
-        $this->match($r->delimit('a', ','), 'a , a', 'a , a', 5, 0);
-        $this->match($r->delimit('a', ','), 'a ,a ', 'a ,a ', 5, 0);
-        $this->match($r->delimit('a', ','), 'a , ', 'a ', 2, 0);
-        $this->match($r->delimit('a', ','), 'a , b', 'a ', 2, 0);
-        $this->match($r->delimit('a', ','), 'a ', 'a ', 2, 0);
+        $this->match($r->zeroOrMore('a'), 'a a a', 'a a a', 5, 0);
+        $this->match($r->zeroOrMore('a'), 'aaa', 'aaa', 3, 0);
     }
 
-    public function test_delimit_action() {
+    public function test_opt() {
         $r = new Morilib\Rena();
-        $e = $r->delimit($r->matchReal(), ',', function($match, $syn, $inh) {
-            return $syn + $inh;
-        });
-        $this->match($e, '765,346', '765,346', 7, 1111);
-        $this->match($e, '3,4,6', '3,4,6', 5, 13);
-        $this->match($e, '283', '283', 3, 283);
+        $this->match($r->opt('a'), 'a', 'a', 1, 0);
+        $this->match($r->opt('a'), 'aa', 'a', 1, 0);
+        $this->match($r->opt('a'), '', '', 0, 0);
     }
 
     public function test_lookahead() {
@@ -195,12 +123,6 @@ class RenaTest extends PHPUnit\Framework\TestCase {
     public function test_attr() {
         $r = new Morilib\Rena();
         $this->match($r->attr(27), '', '', 0, 27);
-    }
-
-    public function test_cond() {
-        $r = new Morilib\Rena();
-        $this->matchAttr($r->cond(function($attr) { return $attr === 27; }), '', 27, '', 0, 27);
-        $this->nomatchAttr($r->cond(function($attr) { return $attr === 27; }), '', 28);
     }
 
     public function test_action() {
@@ -307,16 +229,16 @@ class RenaTest extends PHPUnit\Framework\TestCase {
         $this->match($r->br(), "\n", "\n", 1, 0);
     }
 
-    public function test_end() {
+    public function test_isEnd() {
         $r = new Morilib\Rena();
-        $this->match($r->end(), '', '', 0, 0);
-        $this->nomatch($r->end(), '961');
+        $this->match($r->isEnd(), '', '', 0, 0);
+        $this->nomatch($r->isEnd(), '961');
     }
 
     public function test_letrec() {
         $r = new Morilib\Rena();
         $e = $r->letrec(function($x) use (&$r) {
-            return $r->then('(', $r->maybe($x), ')');
+            return $r->concat('(', $r->opt($x), ')');
         });
         $this->match($e, '((()))', '((()))', 6, 0);
         $this->match($e, '(()))', '(())', 4, 0);
