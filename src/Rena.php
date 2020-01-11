@@ -272,21 +272,19 @@ class Rena {
     }
 
     function letrec(...$funcs) {
-        $f = function($g) {
-            return $g($g);
-        };
-        $h = function($p) use(&$funcs) {
-            $res = array();
-            foreach($funcs as $func) {
-                $res[] = function($match, $lastIndex, $attr) use (&$p, &$func) {
-                    $pp = $p($p);
-                    $pfunc = $this->wrap(call_user_func_array($func, $pp));
-                    return $pfunc($match, $lastIndex, $attr);
+        $delays = array();
+        $memo = array();
+        for($i = 0, $size = count($funcs); $i < $size; $i++) {
+            (function($i) use(&$delays, &$funcs, &$memo) {
+                $delays[] = function($match, $lastIndex, $attr) use(&$funcs, &$memo, &$delays, &$i) {
+                    if(!$memo[$i]) {
+                        $memo[$i] = call_user_func_array($funcs[$i], $delays);
+                    }
+                    return $memo[$i]($match, $lastIndex, $attr);
                 };
-            }
-            return $res;
-        };
-        return ($f($h))[0];
+            })($i);
+        }
+        return $delays[0];
     }
 }
 ?>
